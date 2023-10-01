@@ -4,7 +4,7 @@ on:
     branches:
       [main]
     paths-ignore:
-      - .github/**
+      - .github/** # Don't want to build when I simply update the Actions specs
 jobs:
   build-and-scan-dependencies:
     runs-on: ubuntu-latest

@@ -38,6 +38,7 @@ Add the following as _Repository Variables_ in the _Settings_ tab of the reposit
   and publish the initial artifact and Maven build.
 
 ## Execute a Typical Release Workflow
+TODO: Insert Lucidchart PNG
 
 ### Build an Artifact
 

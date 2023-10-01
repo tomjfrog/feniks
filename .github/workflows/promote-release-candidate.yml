@@ -5,12 +5,15 @@ on:
     tags:
       - 'v*' # Regex pattern to match semantic version strings that begin with a lowercase v followed by any number of digits and dots: v1.0.0, v1.0.0-alpha, etc
 jobs:
-  promote-release-candidate-to-prod:
+  promote-release-candidate-to-prod-and-distribute:
     runs-on: ubuntu-latest
     env:
       JF_ENV_1: ${{ secrets.JF_ENV_1 }}
       JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
       JF_BASE_URL: ${{ vars.JF_BASE_URL }}
+      JF_RELEASE_BUNDLE_NAME: ${{ vars.JF_RELEASE_BUNDLE_NAME }}
+      JF_DISTRIBUTION_SOURCE_REPO: "feniks-maven-dev-local"
+      JF_DISTRIBUTION_DESTINATION_REPO: "feniks-maven-dev-prod"
       RELEASE_BUNDLE_SIGNING_KEY: ${{ secrets.RELEASE_BUNDLE_SIGNING_KEY }}
       JFROG_BUILD_STATUS: PASS
     steps:
@@ -20,13 +23,16 @@ jobs:
         uses: jfrog/setup-jfrog-cli@v3
         with:
           version: latest
+      # This step is also a little 'dumb' in that it only gets the latest RBv2.
+      # It would be better to improve the precision by adding Metadata to the RBv2
+      # and finding the right way to return that in the REST call, filtering with `jq`
       - name: Fetch the latest Release Bundle
         id: fetch_release_bundle
         run: |
           {
           echo 'LATEST_RELEASE_BUNDLE_VERSION<<EOF'
           curl --request GET \
-          --url "$JF_BASE_URL/lifecycle/api/v2/release_bundle/records/feniks-release-bundle?order_by=created&limit=1" \
+          --url "$JF_BASE_URL/lifecycle/api/v2/release_bundle/records/$JF_RELEASE_BUNDLE_NAME?order_by=created&limit=1" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" | jq -r '.release_bundles[0].release_bundle_version'
           echo EOF
           } >> $GITHUB_OUTPUT
@@ -43,8 +49,8 @@ jobs:
           --header "Content-Type: application/json" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header "X-JFrog-Signing-Key-Name: $RELEASE_BUNDLE_SIGNING_KEY" \
-          --data '{"environment":"PROD","included_repository_keys":["feniks-maven-prod-local"],"overwrite_existing_artifacts":false}' \
-          --url "https://tomjfrog.jfrog.io/lifecycle/api/v2/promotion/records/feniks-release-bundle/$RELEASE_BUNDLE_VERSION")
+          --data '{"environment":"PROD","included_repository_keys":["JF_DISTRIBUTION_DESTINATION_REPO"],"overwrite_existing_artifacts":false}' \
+          --url "https://tomjfrog.jfrog.io/lifecycle/api/v2/promotion/records/$JF_RELEASE_BUNDLE_NAME/$RELEASE_BUNDLE_VERSION")
           echo PROMOTE_RESULT=$PROMOTE_RESULT >> $GITHUB_OUTPUT
       - name: Validate Promotion
         id: validate_promotion
@@ -56,7 +62,7 @@ jobs:
           RELEASE_BUNDLE_VERSION: ${{ steps.fetch_release_bundle.outputs.LATEST_RELEASE_BUNDLE_VERSION }}
         run: |
           DISTRIBUTION_RESULT=$(curl --request "POST" \
-          --url "$JF_BASE_URL/lifecycle/api/v2/distribution/distribute/feniks-release-bundle/$RELEASE_BUNDLE_VERSION" \
+          --url "$JF_BASE_URL/lifecycle/api/v2/distribution/distribute/$JF_RELEASE_BUNDLE_NAME/$RELEASE_BUNDLE_VERSION" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header 'Content-Type: application/json' \
           --data '{
@@ -73,8 +79,8 @@ jobs:
               "modifications": {
                 "mappings": [
                   {
-                    "input": "feniks-maven-dev-local",
-                    "output": "feniks-maven-prod-local"
+                    "input": "$JF_DISTRIBUTION_DESTINATION_REPO",
+                    "output": "$JF_DISTRIBUTION_DESTINATION_REPO"
                   }
                 ]
               }
