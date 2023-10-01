@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.tomjfrog</groupId>
-    <artifactId>phoenix-project</artifactId>
+    <artifactId>feniks</artifactId>
     <version>${revision}</version>
 
     <properties>

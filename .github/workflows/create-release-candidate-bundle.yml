@@ -1,0 +1,134 @@
+name: Create Release Bundle and Promote
+
+on:
+  push:
+    tags:
+      - '*-rc-[0-9]*' # Regex pattern to match tags suffixed with '-rc-' followed by a number
+jobs:
+  promote-and-create-release-candidate:
+    runs-on: ubuntu-latest
+    env:
+      JF_ENV_1: ${{ secrets.JF_ENV_1 }}
+      JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      JF_BASE_URL: ${{ vars.JF_BASE_URL }}
+      JF_INSTANCE_NAME: ${{ vars.JF_INSTANCE_NAME }}
+      JF_RELEASE_BUNDLE_NAME: ${{ vars.JF_RELEASE_BUNDLE_NAME }}
+      JF_PROJECT_KEY: ${{ vars.JF_PROJECT_KEY }}
+      BUILD_NAME: ${{ github.repository }}
+      RELEASE_BUNDLE_SIGNING_KEY: ${{ secrets.RELEASE_BUNDLE_SIGNING_KEY }}
+      JFROG_BUILD_STATUS: PASS
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3
+        with:
+          version: latest
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      # Just seeing what sort of metadata I can fish for...
+      - name: Store Commit ID of Tagged Code
+        id: tag_commit_sha
+        run: |
+          echo "COMMIT_SHA=$(git rev-list -n 1 ${{ github.ref }})" >> $GITHUB_OUTPUT
+      # Just seeing what sort of metadata I can fish for...
+      - name: Print Full Ref (tag)
+        run: |
+          echo "Tag: ${{ github.ref }}"
+      # Just seeing what sort of metadata I can fish for...
+      - name: Print Ref (tag) Name
+        run: |
+          echo "Tag: ${{ github.ref_name }}"
+      # Just seeing what sort of metadata I can fish for...
+      - name: Print Commit ID
+        run: |
+          echo "Commit ID: ${{ steps.tag_commit_sha.outputs.COMMIT_SHA }}"
+      # This is a little "dumb" in that we're simply finding the latest build for the given build name.
+      # I wanted to find the build the build-info.env.GITHUB_SHA for last build, the way I was doing it was getting
+      # the GIT ref of the last push to `main` which was grabbing changes on the Github Actions spec files.
+      # I'm sure there's a better way to do this, but this is what I came up with.
+      - name: Execute Build Query
+        id: build_query_result
+        env:
+          COMMIT_SHA: ${{ steps.tag_commit_sha.outputs.COMMIT_SHA }}
+        run: |
+          {
+          echo 'QUERY_RESULT<<EOF'
+          curl --request POST \
+          --url "$JF_BASE_URL/artifactory/api/search/aql" \
+          --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
+          --header 'Content-Type: text/plain' \
+          --data "builds.find({
+              \"name\": \"$BUILD_NAME\"
+           })        
+          .include(\"name\", \"number\", \"created\")
+          .sort({\"\$desc\": [\"created\"]})
+          .limit(1)"
+          echo 'EOF' 
+          } >> $GITHUB_OUTPUT
+      # I will need these values in subsequent steps to create an RB from a build
+      - name: Store Build Name and Number
+        id: store_build_name_and_number
+        env:
+          QUERY_RESULT: ${{ steps.build_query_result.outputs.QUERY_RESULT }}
+        run: |
+          echo "QUERY_RESULT: $QUERY_RESULT"
+          echo "BUILD_NAME=$(echo $QUERY_RESULT | jq -r '.results[0]."build.name"')" >> $GITHUB_OUTPUT
+          echo "BUILD_NUMBER=$(echo $QUERY_RESULT | jq -r '.results[0]."build.number"')" >> $GITHUB_OUTPUT
+        # This was hard.  Multiline strings in GH Actions is not very easy
+      - name: Create Build Spec for Release Bundle
+        id: release_bundle_build_spec
+        env:
+          BUILD_NAME: ${{ steps.store_build_name_and_number.outputs.BUILD_NAME }}
+          BUILD_NUMBER: ${{ steps.store_build_name_and_number.outputs.BUILD_NUMBER }}
+        run: |
+          {
+            echo 'SPEC<<EOF'
+            echo "{
+                    \"builds\": [
+                      {
+                        \"name\": \"$BUILD_NAME\",
+                        \"number\": \"$BUILD_NUMBER\",
+                        \"project\": \"$JF_PROJECT_KEY\"
+                      }
+                    ]
+                  }"
+            echo EOF
+          } >> $GITHUB_OUTPUT
+      # RBv2 CLI requires an actual JSON file, not a JSON-formatted string, as a parameter.  Annoying, but ok
+      - name: Write to File
+        id: create-temp-file
+        env:
+          SPEC: ${{ steps.release_bundle_build_spec.outputs.SPEC }}
+        run: |
+          # Create a temporary file
+          TEMP_FILE=$(mktemp)
+          # Write content to the temporary file
+          echo $SPEC > $TEMP_FILE
+          # Display the path of the temporary file
+          echo "Temporary file path: $TEMP_FILE"
+          # Set the path as an output for other steps to use
+          echo "::set-output name=temp-file-path::$TEMP_FILE"
+      # Let's Go! Also, one has to be mindful of `jf ds rbc` (v1) vs `jf rbc` (v2)
+      - name: Create Release Bundle
+        id: create_release_bundle
+        env:
+            TEMP_FILE_PATH: ${{ steps.create-temp-file.outputs.temp-file-path }}
+        run: |
+          jf release-bundle-create \
+          --project=$JF_PROJECT_KEY \
+          --builds=$TEMP_FILE_PATH \
+          --signing-key=$RELEASE_BUNDLE_SIGNING_KEY \
+          --sync=true \
+          $JF_RELEASE_BUNDLE_NAME ${{ github.ref_name }}
+      - name: Promote Release Bundle to QA
+        id: promote_release_bundle_to_qa
+        run: |
+          jf release-bundle-promote \
+          --signing-key ${{ secrets.RELEASE_BUNDLE_SIGNING_KEY }} \
+          --project $JF_PROJECT_KEY \
+          $JF_RELEASE_BUNDLE_NAME ${{ github.ref_name }} \
+          QA

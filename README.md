@@ -1,11 +1,11 @@
-# Phoenix Project
+# Feniks
 
 A sample repo to showcase a modern Software Development Lifecycle approach.
 
 This demo showcases RBv2 capabilities outside of a (project)[https://jfrog.
 com/help/r/jfrog-platform-administration-documentation/introduction-to-projects]
 
-There is a different (demo)[https://github.com/tomjfrog/phoenix-project],  `tomjfrog/phoenix-project` that showcases 
+There is a different (demo)[https://github.com/tomjfrog/feniks],  `tomjfrog/feniks` that showcases 
 RBv2 capabilities in the context of a JFrog Project.
 
 # Initial Setup
