@@ -49,19 +49,41 @@ jobs:
       # I wanted to find the build the build-info.env.GITHUB_SHA for last build, the way I was doing it was getting
       # the GIT ref of the last push to `main` which was grabbing changes on the Github Actions spec files.
       # I'm sure there's a better way to do this, but this is what I came up with.
+#      - name: Execute Build Query
+#        id: build_query_result
+#        env:
+#          COMMIT_SHA: ${{ steps.tag_commit_sha.outputs.COMMIT_SHA }}
+#        run: |
+#          QUERY_RESULT=$(curl --request "POST" \
+#          --url "$JF_BASE_URL/artifactory/api/search/aql" \
+#          --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
+#          --header 'Content-Type: text/plain' \
+#          --data "builds.find({
+#              \"name\": \"${{ env.BUILD_NAME }}\"
+#           })
+#          .include(\"name\", \"number\", \"created\")
+#          .sort({\"\$desc\": [\"created\"]})
+#          .limit(1)")
+#          echo QUERY_RESULT=$QUERY_RESULT >> $GITHUB_OUTPUT
       - name: Execute Build Query
         id: build_query_result
         env:
           COMMIT_SHA: ${{ steps.tag_commit_sha.outputs.COMMIT_SHA }}
         run: |
-          QUERY_RESULT=$(curl --request "POST" \
+          {
+          echo 'QUERY_RESULT<<EOF'
+          curl --request POST \
           --url "$JF_BASE_URL/artifactory/api/search/aql" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header 'Content-Type: text/plain' \
           --data "builds.find({
-              \"name\": \"${{ env.BUILD_NAME }}\"
-           }).include(\"name\", \"number\", \"created\").sort({\"\$desc\": [\"created\"]}).limit(1)")
-          echo QUERY_RESULT=$QUERY_RESULT >> $GITHUB_OUTPUT
+              \"name\": \"${{ env.BUILD_NAME}}\"
+           })        
+          .include(\"name\", \"number\", \"created\")
+          .sort({\"\$desc\": [\"created\"]})
+          .limit(1)"
+          echo 'EOF' 
+          } >> $GITHUB_OUTPUT
       # I will need these values in subsequent steps to create an RB from a build
       - name: Store Build Name and Number
         id: store_build_name_and_number
