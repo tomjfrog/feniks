@@ -58,9 +58,9 @@ jobs:
           --url "$JF_BASE_URL/artifactory/api/search/aql" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header 'Content-Type: text/plain' \
-          --data "builds.find({
+          --data 'builds.find({
               "name": "$BUILD_NAME"
-           })        
+           })'        
           .include("name", "number", "created")
           .sort({"$desc": ["created"]})
           .limit(1))
