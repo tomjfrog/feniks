@@ -61,8 +61,8 @@ jobs:
           --data "builds.find({
               \"name\": \"${{ env.BUILD_NAME }}\"
            })"        
-          .include("name", "number", "created")
-          .sort({"$desc": ["created"]})
+          .include(\"name\", \"number\", \"created\")
+          .sort({\"\$desc\": [\"created\"]})
           .limit(1))
           echo QUERY_RESULT=$QUERY_RESULT >> $GITHUB_OUTPUT
       # I will need these values in subsequent steps to create an RB from a build
