@@ -79,8 +79,8 @@ jobs:
               "modifications": {
                 "mappings": [
                   {
-                    "input": "$JF_DISTRIBUTION_SOURCE_REPO",
-                    "output": "$JF_DISTRIBUTION_DESTINATION_REPO"
+                    "input": "${{ vars.JF_DISTRIBUTION_SOURCE_REPO }}",
+                    "output": "${{ vars.JF_DISTRIBUTION_DESTINATION_REPO }}"
                   }
                 ]
               }
