@@ -119,13 +119,6 @@ jobs:
       # an "included_repositories" parameter.  Otherwise, your RBv2 content will get into
       # *every single repo* associated with the Target env.  The CLI doesn't offer this parameter
       # And we don't want to Promote this RBV2 all over the place.
-#      - name: Promote Release Bundle to QA
-#        id: promote_release_bundle_to_qa
-#        run: |
-#          jf release-bundle-promote \
-#          --signing-key ${{ secrets.RELEASE_BUNDLE_SIGNING_KEY }} \
-#          $JF_RELEASE_BUNDLE_NAME ${{ github.ref_name }} \
-#          QA
       - name: Promote Release Bundle
         id: promote_release_bundle
         env:
