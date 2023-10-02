@@ -135,7 +135,13 @@ jobs:
           --header "Content-Type: application/json" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header "X-JFrog-Signing-Key-Name: $RELEASE_BUNDLE_SIGNING_KEY" \
-          --data '{"environment":"QA","included_repository_keys":["$JF_QA_PROMOTION_INCLUDED_REPO"],"overwrite_existing_artifacts":false}' \
+          --data '{
+            "environment":"QA",
+            "included_repository_keys": [
+              "${{ vars.JF_QA_PROMOTION_INCLUDED_REPO }}"
+            ],
+            "overwrite_existing_artifacts":false
+          }' \
           --url "https://tomjfrog.jfrog.io/lifecycle/api/v2/promotion/records/$JF_RELEASE_BUNDLE_NAME/${{ github.ref_name }}")
           echo PROMOTE_RESULT=$PROMOTE_RESULT >> $GITHUB_OUTPUT
       - name: Validate Promotion
