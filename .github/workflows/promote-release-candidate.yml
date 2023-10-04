@@ -49,7 +49,7 @@ jobs:
           --header "Content-Type: application/json" \
           --header "Authorization: Bearer $JF_ACCESS_TOKEN" \
           --header "X-JFrog-Signing-Key-Name: $RELEASE_BUNDLE_SIGNING_KEY" \
-          --data '{"environment":"PROD","included_repository_keys":["JF_DISTRIBUTION_DESTINATION_REPO"],"overwrite_existing_artifacts":false}' \
+          --data '{"environment":"PROD","included_repository_keys":["$JF_DISTRIBUTION_DESTINATION_REPO"],"overwrite_existing_artifacts":false}' \
           --url "https://tomjfrog.jfrog.io/lifecycle/api/v2/promotion/records/$JF_RELEASE_BUNDLE_NAME/$RELEASE_BUNDLE_VERSION")
           echo PROMOTE_RESULT=$PROMOTE_RESULT >> $GITHUB_OUTPUT
       - name: Validate Promotion
