@@ -49,7 +49,7 @@ jobs:
           jf mvn clean install \
           -Drevision=${{ env.GIT_COMMIT_SHA }} \
           --build-name=${{ github.repository }} \
-          --build-number=${{ github.run_number }}
+          --build-number=${{ env.GIT_COMMIT_SHA }}
       - name: Audit Dependencies
         run: |
           jf audit --mvn
