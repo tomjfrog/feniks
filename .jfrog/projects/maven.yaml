@@ -1,0 +1,10 @@
+version: 1
+type: maven
+resolver:
+  serverId: tomjfrog.jfrog.io
+  snapshotRepo: feniks-maven-dev-virtual
+  releaseRepo: feniks-maven-dev-virtual
+deployer:
+  serverId: tomjfrog.jfrog.io
+  snapshotRepo: feniks-maven-dev-local
+  releaseRepo: feniks-maven-dev-local
