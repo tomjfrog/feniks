@@ -58,7 +58,7 @@ this workflow are `1.0.0-rc-1` or `1.0.0-rc-2`. This will execute the following 
 This RBv2 could be distributed to Edge nodes for in-depth QA testing, which would likely be done with at least some
 manual workflows.
 
-12
+13
 ### Create a SemVer Production Release
 
 To build a SemVer release, create a release in Github with the pattern `vx.{x}.{x}`. This will trigger a workflow to
